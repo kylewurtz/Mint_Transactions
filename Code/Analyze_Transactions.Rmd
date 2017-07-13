@@ -1,0 +1,89 @@
+---
+title: "Untitled"
+author: "kyle wurtz"
+date: "7/13/2017"
+output: html_document
+---
+
+## Overview
+
+## Setup
+```{r load packages}
+require(tidyverse)
+require(magrittr)
+require(lubridate)
+require(stringr)
+require(skimr)
+```
+
+```{r read data}
+df_trans = read_csv("../Mint_Transactions_Data/Input/transactions_20170713.csv")
+```
+
+```{r clean up data}
+df_trans %<>% 
+  separate(Date, c("Month", "Day", "Year")) %>% 
+  mutate(
+    Date = ymd(
+      paste0(Year, 
+             str_pad(Month, 2, pad = 0, side = "left"), 
+             str_pad(Day, 2, pad = 0, side = "left"))
+    ),
+    Month = as.numeric(Month),
+    Day = as.numeric(Day),
+    Year = as.numeric(Year)
+  )
+
+names(df_trans) = make.names(names(df_trans))
+```
+
+
+## Work
+### Initial Look
+```{r}
+glimpse(df_trans)
+skim(df_trans)
+```
+
+```{r check distributions}
+df_trans %>% 
+  filter(!(Category %in% c("Paycheck", "Credit Card Payment", "Transfer"))) %>% 
+  group_by(Category) %>% 
+  summarize(
+    n = n(),
+    Amount = sum(Amount)
+  ) %>% 
+  mutate(
+    dist = Amount / sum(Amount),
+    mean_amount = Amount / n
+  ) %>% 
+  arrange(desc(dist)) %>% 
+  mutate(dist = scales::percent(dist))
+```
+
+
+
+### Photography
+```{r}
+df_photography = df_trans %>% 
+  filter(Category == "Photography") 
+
+df_photography %>% 
+  ggplot(., aes(x = Date, y = Amount)) +
+  geom_point() +
+  geom_smooth()
+
+df_photography %>% 
+  group_by(Year, Month) %>% 
+  summarize(Amount = sum(Amount)) %>% 
+  mutate(
+    Date = ymd(
+      paste0(Year, 
+             str_pad(Month, 2, pad = 0, side = "left"), 
+             "01")
+    )
+  ) %>% 
+  ggplot(., aes(x = Date, y = Amount)) +
+  geom_bar(stat = "identity")
+```
+
