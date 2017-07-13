@@ -61,6 +61,56 @@ df_trans %>%
   mutate(dist = scales::percent(dist))
 ```
 
+### Categories Over Time
+```{r create trends data frame}
+df_trends = df_trans %>% 
+  mutate(Date = ymd(
+      paste0(Year, 
+             str_pad(Month, 2, pad = 0, side = "left"), 
+             "01")
+    )) %>% 
+  group_by(Date, Category) %>% 
+  summarize(
+    transactions = n(),
+    Amount = sum(Amount)
+  ) %>% 
+  mutate(dist = Amount / sum(Amount))
+
+df_trends %>% 
+  group_by(Category) %>% 
+  summarize(Amount = sum(Amount)) %>% 
+  arrange(desc(Amount))
+
+df_trends %<>%
+  filter(!(Category %in% c("Paycheck", "Transfer", "Credit Card Payment")))
+```
+
+```{r visualize trends}
+top_categories = df_trends %>% 
+  group_by(Category) %>% 
+  summarize(Amount = sum(Amount)) %>% 
+  arrange(desc(Amount)) %>% 
+  slice(1:10) %>% 
+  pull(Category)
+df_trends %>% 
+  filter(Category %in% c(top_categories)) %>% 
+  group_by(Date, Category) %>% 
+  summarize(
+    transactions = n(),
+    Amount = sum(Amount)
+  ) %>% 
+  mutate(dist = Amount / sum(Amount)) %>% 
+  ggplot(., aes(x = Date, y = dist, fill = Category)) +
+    geom_bar(stat = "identity")
+
+df_trends %>% 
+  filter(Category %in% top_categories) %>% 
+  mutate(Amount = pmin(pmax(Amount, -100), 4000)) %>% 
+  ggplot(., aes(x = Date, y = Amount)) +
+  geom_point() + geom_smooth() +
+  facet_wrap(~Category)
+```
+
 
 
 ### Photography
